@@ -1,0 +1,7 @@
+[workspace]
+members = [
+    "sysport",
+    "plugins/sample_plugin"
+]
+
+# The rest of this file will be moved to sysport/Cargo.toml
