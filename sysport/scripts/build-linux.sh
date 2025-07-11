@@ -7,6 +7,10 @@ DIST_DIR="dist"
 PLUGINS_DIR="$DIST_DIR/plugins"
 ICON_PNG="../sysport.png"
 
+if ! dpkg -s libpcap-dev >/dev/null 2>&1; then
+  echo "[WARN] libpcap-dev is not installed. Please install it with: sudo apt-get install -y libpcap-dev"
+fi
+
 rm -rf "$DIST_DIR"
 mkdir -p "$PLUGINS_DIR"
 
