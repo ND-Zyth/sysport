@@ -1,0 +1,93 @@
+name: Release Build & Publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y lsb-release fakeroot rpm
+          cargo install cargo-deb
+          cargo install cargo-generate-rpm
+      - name: Build and package (Linux)
+        run: bash sysport/scripts/build-linux.sh
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sysport-linux
+          path: dist/*
+
+  build-macos-x86_64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install packaging tools
+        run: |
+          brew install create-dmg
+      - name: Install Rust target (x86_64)
+        run: rustup target add x86_64-apple-darwin
+      - name: Build and package (macOS x86_64)
+        run: bash sysport/scripts/build-macos-x86_64.sh
+      - name: Upload macOS x86_64 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sysport-macos-x86_64
+          path: dist/*
+
+  build-macos-arm64:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install packaging tools
+        run: |
+          brew install create-dmg
+      - name: Install Rust target (arm64)
+        run: rustup target add aarch64-apple-darwin
+      - name: Build and package (macOS arm64)
+        run: bash sysport/scripts/build-macos-arm64.sh
+      - name: Upload macOS arm64 Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sysport-macos-arm64
+          path: dist/*
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install rcedit for icon embedding
+        run: npm install -g rcedit
+      - name: Update Cargo.lock
+        run: cargo update
+      - name: Clean build artifacts
+        run: cargo clean
+      - name: Build and package (Windows)
+        run: sysport/scripts/build-windows.bat
+        # mlua is built with vendored Lua, no system Lua or pkg-config needed
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: sysport-windows
+          path: dist/*
+
+  publish:
+    needs: [build-linux, build-macos, build-macos-x86_64, build-macos-arm64, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+      - name: Publish Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ./artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
